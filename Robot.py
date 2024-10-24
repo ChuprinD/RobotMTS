@@ -6,10 +6,11 @@ class Robot:
 
     def __init__(self, cell, board):
         self.id = ""
+        self.ip = ""
         self.cur_cell = cell
         self.board = board
         self.board.visit_cell(cell)
-        self.client = Client()
+        self.client = Client(self.id, self.ip)
         self.cur_direction = 0
         self.is_centered = True
         self.diff_x = 0
@@ -25,7 +26,7 @@ class Robot:
         self.turn_left_angle = 270
 
     def make_step(self):
-        data = self.client.get_data()
+        data = self.client.get_sensor_data(self.client.request_all)
         dist = [
             data['front_distance'],
             data['right_side_distance'],

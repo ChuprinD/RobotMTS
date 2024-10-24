@@ -11,15 +11,19 @@ class Client:
         self.robot_ip = ip
         self.robot_id = id
         self.client = requests.Session()
-        self.get_sensor_data()
+        self.request_all = "all"
+        self.request_laser = "laser"
+        self.request_imu = "imu"
+        self.get_sensor_data(self.request_all)
+        
 
-    def get_url(self):
-        return f"http://[{self.robot_ip}]/move"
+    def get_url(self, action):
+        return f"http://[{self.robot_ip}]/{action}"
 
-    def get_sensor_data(self):
+    def get_sensor_data(self, request_type):
         try:
-            url = self.get_url("sensor-data")
-            response = self.client.get(url)
+            url = self.get_url("sensor")
+            response = self.client.put(url, data={"id":self.robot_id, "type":request_type})
             response.raise_for_status()
 
             sensor_data = json.loads(response.text)
@@ -31,7 +35,7 @@ class Client:
 
     def make_action(self, action, len):
         try:
-            url = self.get_url(action, len)
+            url = self.get_url("move")
             response = self.client.put(url, data={"id":self.robot_id, "direction":action, "len":len})
             response.raise_for_status()
 
@@ -52,19 +56,6 @@ class Client:
 
     def turn_right(self, len):
         self.make_action("right", len)
-
-    def get_data(self):
-        try:
-            url = self.get_uri("sensor-data")
-            response = self.client.get(url)
-            response.raise_for_status()
-
-            sensor_data = json.loads(response.text)
-            return sensor_data
-
-        except requests.exceptions.RequestException as e:
-            print(f"An error occurred: {e}")
-            return None
 
     def send_matrix(self, matrix):
         try:
