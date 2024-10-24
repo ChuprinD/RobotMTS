@@ -25,6 +25,17 @@ class Robot:
         self.turn_right_angle = 90
         self.turn_left_angle = 270
 
+    def scan_maze(self):
+        prev = self.client.get_sensor_data(self.client.request_all)
+
+        while self.board.visited_cells != self.board.total_cells:
+            sensor_data = self.client.get_sensor_data(self.client.request_all)
+            is_stepped = self.make_step()
+            print(f"{self.visited_cells} / {self.total_cells}")
+            if not is_stepped:
+                self.return_back_to_crossroad()
+            prev = sensor_data
+
     def make_step(self):
         data = self.client.get_sensor_data(self.client.request_all)
         dist = [

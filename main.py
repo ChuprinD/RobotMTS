@@ -2,23 +2,15 @@ import os
 import time
 from Board import Board
 from Robot import Robot
-from Client import Client
 
 def main():
     board = Board()
     cell = board.get_cell(0, 0)
     robot = Robot(cell, board)
-    prev = robot.client.get_sensor_data(robot.client.request_all)
 
-    while board.visited_cells != board.total_cells:
-        sensor_data = robot.client.get_sensor_data(robot.client.request_all)
-        is_stepped = robot.make_step()
-        print(f"{board.visited_cells} / {board.total_cells}")
-        if not is_stepped:
-            robot.return_back_to_crossroad()
-        prev = sensor_data
-
-    sensor_data = robot.client.get_data()
+    robot.scan_maze()
+    
+    sensor_data = robot.client.get_sensor_data(robot.client.request_all)
     dist = [
         sensor_data['front_distance'],
         sensor_data['right_side_distance'],
@@ -35,7 +27,7 @@ def main():
 
 
 if __name__ == "__main__":
-    os.system("pip install requests")
-    time.sleep(10)
+    #os.system("pip install requests")
+    #time.sleep(10)
     main()
 
