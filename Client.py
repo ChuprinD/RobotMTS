@@ -15,16 +15,19 @@ class Client:
         self.request_laser = "laser"
         self.request_imu = "imu"
         self.get_sensor_data(self.request_all)
-        
 
     def get_url(self, action):
-        return f"http://[{self.robot_ip}]/{action}"
+        return f"http://{self.robot_ip}/{action}"
 
     def get_sensor_data(self, request_type):
         try:
             url = self.get_url("sensor")
             time.sleep(1.4)
-            response = self.client.put(url, data={"id":self.robot_id, "type":request_type})
+            print(url)
+            headers = {'Content-Type': 'application/json'}
+            json_matrix = json.dumps({"id": self.robot_id, "type": request_type})
+            response = self.client.post(url, data=json_matrix, headers=headers)
+
             response.raise_for_status()
 
             sensor_data = json.loads(response.text)
@@ -39,7 +42,9 @@ class Client:
     def make_action(self, action, len):
         try:
             url = self.get_url("move")
-            response = self.client.put(url, data={"id":self.robot_id, "direction":action, "len":len})
+            headers = {'Content-Type': 'application/json'}
+            json_matrix = json.dumps({"id": self.robot_id, "direction": action, "len": len})
+            response = self.client.put(url, data=json_matrix, headers=headers)
             response.raise_for_status()
 
             print(f"Action '{action}' executed successfully")
