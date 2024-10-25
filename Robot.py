@@ -26,15 +26,11 @@ class Robot:
         self.turn_left_angle = 270
 
     def scan_maze(self):
-        prev = self.client.get_sensor_data(self.client.request_all)
-
         while self.board.visited_cells != self.board.total_cells:
-            sensor_data = self.client.get_sensor_data(self.client.request_all)
             is_stepped = self.make_step()
             print(f"{self.visited_cells} / {self.total_cells}")
             if not is_stepped:
                 self.return_back_to_crossroad()
-            prev = sensor_data
 
     def make_step(self):
         data = self.client.get_sensor_data(self.client.request_all)
@@ -51,8 +47,11 @@ class Robot:
         for i in range(4):
             if self.can_go(dist[i], i):
                 self.memory.append(i)
-                self.cur_cell = self.get_cell(i)
+                next_step = self.get_cell(i)
+                self.board.remove_wall(self.cur_cell, next_step)
+                self.cur_cell = next_step
                 self.board.visit_cell(self.cur_cell)
+                self.board.print_board(self)
                 self.actions[i]()
                 return True
         return False
@@ -128,6 +127,8 @@ class Robot:
         self.diff_y = abs(cur_y - should_be_y)
         self.is_centered = self.diff_x <= 25 and self.diff_y <= 25
 
+
+    #TODO: correction on yaw
     def go_right(self):
         self.cur_direction = (self.cur_direction + 1) % 4
         self.client.turn_right(self.turn_right_angle)

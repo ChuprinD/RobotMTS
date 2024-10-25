@@ -2,12 +2,24 @@ class Cell:
     def __init__(self, y, x):
         self.x = x
         self.y = y
-        self.top_wall = None
-        self.left_wall = None
-        self.right_wall = None
-        self.bottom_wall = None
+        self.top_wall = True
+        self.left_wall = True
+        self.right_wall = True
+        self.bottom_wall = True
         self.visited = False
         self.size = 180
+
+    def to_dict(self):
+        return {
+            'x': self.x,
+            'y': self.y,
+            'top_wall': self.top_wall,
+            'left_wall': self.left_wall,
+            'right_wall': self.right_wall,
+            'bottom_wall': self.bottom_wall,
+            'visited': self.visited,
+            'size': self.size
+        }
 
     def get_size(self):
         return self.size

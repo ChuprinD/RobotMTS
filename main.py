@@ -7,7 +7,7 @@ def main():
     board = Board()
     cell = board.get_cell(0, 0)
     robot = Robot(cell, board)
-
+    board.print_board(robot)
     robot.scan_maze()
     
     sensor_data = robot.client.get_sensor_data(robot.client.request_all)
@@ -19,15 +19,14 @@ def main():
     ]
     robot.analyze_data(dist)
 
-    matrix = board.board_to_code_matrix()
+    matrix = robot.board.board_to_code_matrix()
     for row in matrix:
         print(" ".join(map(str, row)))
 
     robot.client.send_matrix(matrix)
 
-
 if __name__ == "__main__":
-    #os.system("pip install requests")
-    #time.sleep(10)
+    os.system("pip install requests")
+    time.sleep(10)
     main()
 
