@@ -23,10 +23,13 @@ class Client:
     def get_sensor_data(self, request_type):
         try:
             url = self.get_url("sensor")
+            time.sleep(1.4)
             response = self.client.put(url, data={"id":self.robot_id, "type":request_type})
             response.raise_for_status()
 
             sensor_data = json.loads(response.text)
+            print(sensor_data)
+            time.sleep(0.1)
             return sensor_data
 
         except requests.exceptions.RequestException as e:
@@ -56,18 +59,3 @@ class Client:
 
     def turn_right(self, len):
         self.make_action("right", len)
-
-    def send_matrix(self, matrix):
-        try:
-            url = f"http://127.0.0.1:8801/api/v1/matrix/send?token={self.token}"
-            headers = {'Content-Type': 'application/json'}
-            json_matrix = json.dumps(matrix)
-
-            response = self.client.post(url, data=json_matrix, headers=headers)
-            response.raise_for_status()
-
-            print("Response status code:", response.status_code)
-            print("Response body:", response.text)
-
-        except requests.exceptions.RequestException as e:
-            print(f"An error occurred while sending matrix: {e}")

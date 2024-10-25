@@ -70,7 +70,6 @@ class Board:
         return self.matrix[self.board_size - 1 - y][x]
 
     def visit_cell(self, cell):
-
         cell.visited = True
         self.visited_cells += 1
 

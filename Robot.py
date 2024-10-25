@@ -28,17 +28,17 @@ class Robot:
     def scan_maze(self):
         while self.board.visited_cells != self.board.total_cells:
             is_stepped = self.make_step()
-            print(f"{self.visited_cells} / {self.total_cells}")
+            print(f"{self.board.visited_cells} / {self.board.total_cells}")
             if not is_stepped:
                 self.return_back_to_crossroad()
 
     def make_step(self):
         data = self.client.get_sensor_data(self.client.request_all)
         dist = [
-            data['front_distance'],
-            data['right_side_distance'],
-            data['back_distance'],
-            data['left_side_distance']
+            data['4'],
+            data['5'],
+            data['1'],
+            data['2']
         ]
 
         self.check_is_centered(data)
@@ -60,12 +60,12 @@ class Robot:
         self.turn_around()
         self.memory.append(0)
         while True:
-            data = self.client.get_data()
+            data = self.client.get_sensor_data(self.client.request_all)
             dist = [
-                data['front_distance'],
-                data['right_side_distance'],
-                data['back_distance'],
-                data['left_side_distance']
+                data['4'],
+                data['5'],
+                data['1'],
+                data['2']
             ]
             self.analyze_data(dist)
 
