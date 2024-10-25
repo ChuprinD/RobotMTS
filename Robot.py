@@ -5,8 +5,8 @@ class Robot:
     BORDER_TO_GO = 150
 
     def __init__(self, cell, board):
-        self.id = ""
-        self.ip = ""
+        self.id = "F535AF9628574A53"
+        self.ip = "192.168.68.151"
         self.cur_cell = cell
         self.board = board
         self.board.visit_cell(cell)
@@ -28,20 +28,20 @@ class Robot:
     def scan_maze(self):
         while self.board.visited_cells != self.board.total_cells:
             is_stepped = self.make_step()
-            print(f"{self.visited_cells} / {self.total_cells}")
+            print(f"{self.board.visited_cells} / {self.board.total_cells}")
             if not is_stepped:
                 self.return_back_to_crossroad()
 
     def make_step(self):
         data = self.client.get_sensor_data(self.client.request_all)
         dist = [
-            data['front_distance'],
-            data['right_side_distance'],
-            data['back_distance'],
-            data['left_side_distance']
+            data['laser']['4'],
+            data['laser']['5'],
+            data['laser']['1'],
+            data['laser']['2']
         ]
 
-        self.check_is_centered(data)
+        # self.check_is_centered(data)
         self.analyze_data(dist)
 
         for i in range(4):
@@ -60,12 +60,12 @@ class Robot:
         self.turn_around()
         self.memory.append(0)
         while True:
-            data = self.client.get_data()
+            data = self.client.get_sensor_data(self.client.request_all)
             dist = [
-                data['front_distance'],
-                data['right_side_distance'],
-                data['back_distance'],
-                data['left_side_distance']
+                data['laser']['4'],
+                data['laser']['5'],
+                data['laser']['1'],
+                data['laser']['2']
             ]
             self.analyze_data(dist)
 
@@ -114,18 +114,18 @@ class Robot:
             elif direction == 3:
                 self.cur_cell.left_wall = dist[i] <= self.BORDER_TO_GO
 
-    def check_is_centered(self, sensor_data):
-        x_wall = 166.7
-        y_wall = 167
-        board_x = self.cur_cell.x - 8 + 0.5
-        board_y = self.cur_cell.y - 8 + 0.5
-        cur_x = sensor_data['down_y_offset']
-        cur_y = sensor_data['down_x_offset']
-        should_be_x = x_wall * board_x
-        should_be_y = y_wall * board_y
-        self.diff_x = abs(cur_x - should_be_x)
-        self.diff_y = abs(cur_y - should_be_y)
-        self.is_centered = self.diff_x <= 25 and self.diff_y <= 25
+    # def check_is_centered(self, sensor_data):
+    #     x_wall = 166.7
+    #     y_wall = 167
+    #     board_x = self.cur_cell.x - 8 + 0.5
+    #     board_y = self.cur_cell.y - 8 + 0.5
+    #     cur_x = sensor_data['down_y_offset']
+    #     cur_y = sensor_data['down_x_offset']
+    #     should_be_x = x_wall * board_x
+    #     should_be_y = y_wall * board_y
+    #     self.diff_x = abs(cur_x - should_be_x)
+    #     self.diff_y = abs(cur_y - should_be_y)
+    #     self.is_centered = self.diff_x <= 25 and self.diff_y <= 25
 
 
     #TODO: correction on yaw
