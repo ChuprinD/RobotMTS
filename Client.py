@@ -22,7 +22,7 @@ class Client:
     def get_sensor_data(self, request_type):
         try:
             url = self.get_url("sensor")
-            time.sleep(1.4)
+            time.sleep(3)
             print(url)
             headers = {'Content-Type': 'application/json'}
             json_matrix = json.dumps({"id": self.robot_id, "type": request_type})
@@ -54,16 +54,16 @@ class Client:
             print(f"An error occurred during 'move {direction}': {e}")
             return None
 
-    def make_action_motor(self, left_pwm, right_pwm, time):
+    def make_action_motor(self, left_pwm, right_pwm, time_motor):
         try:
+            print(f"make_action_motor: left:{left_pwm}, right:{right_pwm}, time:{time_motor}")
             url = self.get_url("motor")
             headers = {'Content-Type': 'application/json'}
-            json_matrix = json.dumps({"id": self.robot_id, "l": left_pwm, "r": right_pwm, "l_time": time, "r_time": time})
+            json_matrix = json.dumps({"id": self.robot_id, "l": left_pwm, "r": right_pwm, "l_time": time_motor, "r_time": time_motor})
             response = self.client.put(url, data=json_matrix, headers=headers)
             response.raise_for_status()
-
             print(f"Action 'move by motor' executed successfully")
-            time.sleep(time / 1000)
+            time.sleep(1)
 
         except requests.exceptions.RequestException as e:
             print(f"An error occurred during 'move by motor': {e}")

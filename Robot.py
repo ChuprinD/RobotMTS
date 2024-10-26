@@ -2,12 +2,13 @@ from Client import Client
 from collections import deque
 from Directions import Direction
 
+
 class Robot:
     BORDER_TO_GO = 150
 
     def __init__(self, cell, board, is_motor_used):
-        self.id = "F535AF9628574A53"
-        self.ip = "192.168.68.151"
+        self.id = "3536AF962E7A4A53"
+        self.ip = "192.168.68.134"
         self.cur_cell = cell
         self.board = board
         self.board.visit_cell(cell)
@@ -25,9 +26,9 @@ class Robot:
         ]
         self.turn_right_angle = 90
         self.turn_left_angle = 270
-        
+
         self.is_motor_used = is_motor_used
-        self.base_pwm = 150
+        self.base_pwm = 60
         self.adjustment_pwm = 0
         self.left_pwm = self.base_pwm
         self.right_pwm = self.base_pwm
@@ -36,7 +37,7 @@ class Robot:
 
     def scan_maze(self):
         self.calibration()
-
+        input()
         while self.board.visited_cells != self.board.total_cells:
             is_stepped = self.make_step()
             print(f"{self.board.visited_cells} / {self.board.total_cells}")
@@ -168,19 +169,21 @@ class Robot:
 
     def set_motor_for_direct_move(self):
         adjustment = 5
-        test_time = 1000
+        test_time = 300
 
         for _ in range(10):
-            initial_yaw = self.client.get_sensor_data(self.client.request_all)['yaw']
-            
-            self.client.make_action_motor(self.left_pwm, self.right_pwm, test_time, test_time)
-            
-            final_yaw = self.client.get_sensor_data(self.client.request_all)['yaw']
-            
+            initial_yaw = self.client.get_sensor_data(self.client.request_all)['imu']['yaw']
+
+            self.client.make_action_motor(self.left_pwm, self.right_pwm, test_time)
+
+            final_yaw = self.client.get_sensor_data(self.client.request_all)['imu']['yaw']
+
             yaw_error = final_yaw - initial_yaw
 
-            self.client.make_action_motor(-self.left_pwm, -self.right_pwm, test_time, test_time)
-            
+            self.client.make_action_motor(-self.left_pwm, -self.right_pwm, test_time)
+
+            print(f"(dirct move)initial yaw: {initial_yaw}, final_yaw : {final_yaw}")
+
             if yaw_error > 1:  # The robot goes to the right, we slow down the right engine
                 self.right_pwm -= adjustment
             elif yaw_error < -1:  # The robot goes to the left, we slow down the left motor
@@ -189,51 +192,48 @@ class Robot:
                 break  # The robot is moving straight, calibration is complete
 
         difference = abs(self.left_pwm - self.right_pwm)
-
-        if self.right_pwm < self.left_pwm:
-            self.left_pwm = 255
-            self.right_pwm = 255 - difference
-        else:
-            self.right_pwm = 255
-            self.left_pwm = 255 - difference
+        # if self.right_pwm < self.left_pwm:
+        #     self.left_pwm = 255
+        #     self.right_pwm = 255 - difference
+        # else:
+        #     self.right_pwm = 255
+        #     self.left_pwm = 255 - difference
 
     def set_time_for_one_step(self):
-        move_duration = 1000  
-        initial_front_distance = self.client.get_sensor_data(self.client.request_all)[Direction.FORWARD.value]
-        self.client.make_action_motor(self.left_pwm, self.right_pwm, move_duration)
-
-        final_front_distance = self.client.get_sensor_data(self.client.request_all)[Direction.FORWARD.value]
-        self.client.make_action_motor(-self.left_pwm, -self.right_pwm, move_duration)
-
-        distance = abs(final_front_distance - initial_front_distance)
-        speed = distance / move_duration
-        self.time_for_one_step = self.board.get_cell_size() / speed
+        self.time_for_one_step = 300
+        for _ in range(4):
+            initial_front_distance = self.client.get_sensor_data(self.client.request_all)['laser'][
+                Direction.FORWARD.value]
+            self.client.make_action_motor(self.left_pwm, self.right_pwm, self.time_for_one_step)
+            final_front_distance = self.client.get_sensor_data(self.client.request_all)['laser'][
+                Direction.FORWARD.value]
+            self.client.make_action_motor(-self.left_pwm, -self.right_pwm, self.time_for_one_step)
+            print(f"(distance)initial front dist: {initial_front_distance}, final front dist : {final_front_distance}")
+            distance = abs(final_front_distance - initial_front_distance)
+            speed = distance / self.time_for_one_step
+            self.time_for_one_step = self.board.get_cell_size() / speed
 
     def set_time_for_90_degree_turn(self):
-        left_pwm = 255
-        right_pwm = -255
-        move_duration = 1000
-
-        initial_yaw = self.client.get_sensor_data(self.client.request_all)['yaw']
-        self.client.make_action_motor(left_pwm, right_pwm, move_duration, move_duration)
-
-        final_yaw = self.client.get_sensor_data(self.client.request_all)['yaw']
-        self.client.make_action_motor(-left_pwm, -right_pwm, move_duration, move_duration)
-
-        difference_yaw = abs(final_yaw - initial_yaw)
-        speed = difference_yaw / move_duration
-        self.time_for_90_degree_turn = 90 / speed
-
+        self.time_for_90_degree_turn = 300
+        for _ in range(4):
+            initial_yaw = self.client.get_sensor_data(self.client.request_all)['imu']['yaw']
+            self.client.make_action_motor(self.left_pwm, -self.right_pwm, self.time_for_90_degree_turn)
+            final_yaw = self.client.get_sensor_data(self.client.request_all)['imu']['yaw']
+            self.client.make_action_motor(-self.left_pwm, self.right_pwm, self.time_for_90_degree_turn)
+            print(f"(90 degree)initial yaw: {initial_yaw}, final_yaw : {final_yaw}")
+            difference_yaw = abs(final_yaw - initial_yaw)
+            speed = min(abs(360 - difference_yaw), abs(difference_yaw)) / self.time_for_90_degree_turn
+            self.time_for_90_degree_turn = 90 / speed
 
     def calibration(self):
         self.set_motor_for_direct_move()
         self.set_time_for_one_step()
         self.set_time_for_90_degree_turn()
 
-        
-        
 
 
 
 
-        
+
+
+

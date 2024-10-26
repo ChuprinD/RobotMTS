@@ -8,9 +8,9 @@ from Directions import Direction
 def main():
     board = Board()
     cell = board.get_cell(0, 0)
-    robot = Robot(cell, board, False)
-    robot.scan_maze()
+    robot = Robot(cell, board, True)
 
+    robot.scan_maze()
     sensor_data = robot.client.get_sensor_data(robot.client.request_all)
     dist = Direction.get_ordered_directions(sensor_data['laser'])
     robot.analyze_data(dist)
