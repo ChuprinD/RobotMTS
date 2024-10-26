@@ -39,19 +39,35 @@ class Client:
             print(f"An error occurred: {e}")
             return None
 
-    def make_action(self, action, len):
+    def make_action(self, direction, len):
         try:
             url = self.get_url("move")
             headers = {'Content-Type': 'application/json'}
-            json_matrix = json.dumps({"id": self.robot_id, "direction": action, "len": len})
+            json_matrix = json.dumps({"id": self.robot_id, "direction": direction, "len": len})
             response = self.client.put(url, data=json_matrix, headers=headers)
             response.raise_for_status()
 
-            print(f"Action '{action}' executed successfully")
+            print(f"Action 'move {direction}' executed successfully")
             time.sleep(0.25)
 
         except requests.exceptions.RequestException as e:
-            print(f"An error occurred during '{action}': {e}")
+            print(f"An error occurred during 'move {direction}': {e}")
+            return None
+
+    def make_action_motor(self, left_pwm, right_pwm, time):
+        try:
+            url = self.get_url("motor")
+            headers = {'Content-Type': 'application/json'}
+            json_matrix = json.dumps({"id": self.robot_id, "l": left_pwm, "r": right_pwm, "l_time": time, "r_time": time})
+            response = self.client.put(url, data=json_matrix, headers=headers)
+            response.raise_for_status()
+
+            print(f"Action 'move by motor' executed successfully")
+            time.sleep(time / 1000)
+
+        except requests.exceptions.RequestException as e:
+            print(f"An error occurred during 'move by motor': {e}")
+            return None
 
     def go_forward(self, len):
         self.make_action("forward", len)

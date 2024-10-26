@@ -7,7 +7,7 @@ class Cell:
         self.right_wall = True
         self.bottom_wall = True
         self.visited = False
-        self.size = 180
+        self.size = 168
 
     def to_dict(self):
         return {

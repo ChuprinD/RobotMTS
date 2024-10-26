@@ -2,21 +2,17 @@ import os
 import time
 from Board import Board
 from Robot import Robot
+from Directions import Direction
 
 
 def main():
     board = Board()
     cell = board.get_cell(0, 0)
-    robot = Robot(cell, board)
+    robot = Robot(cell, board, False)
     robot.scan_maze()
 
     sensor_data = robot.client.get_sensor_data(robot.client.request_all)
-    dist = [
-        sensor_data['laser']['4'],
-        sensor_data['laser']['5'],
-        sensor_data['laser']['1'],
-        sensor_data['laser']['2']
-    ]
+    dist = Direction.get_ordered_directions(sensor_data['laser'])
     robot.analyze_data(dist)
 
     matrix = robot.board.board_to_code_matrix()

@@ -1,10 +1,11 @@
 from Client import Client
 from collections import deque
+from Directions import Direction
 
 class Robot:
     BORDER_TO_GO = 150
 
-    def __init__(self, cell, board):
+    def __init__(self, cell, board, is_motor_used):
         self.id = "F535AF9628574A53"
         self.ip = "192.168.68.151"
         self.cur_cell = cell
@@ -24,8 +25,18 @@ class Robot:
         ]
         self.turn_right_angle = 90
         self.turn_left_angle = 270
+        
+        self.is_motor_used = is_motor_used
+        self.base_pwm = 150
+        self.adjustment_pwm = 0
+        self.left_pwm = self.base_pwm
+        self.right_pwm = self.base_pwm
+        self.time_for_one_step = 0
+        self.time_for_90_degree_turn = 0
 
     def scan_maze(self):
+        self.calibration()
+
         while self.board.visited_cells != self.board.total_cells:
             is_stepped = self.make_step()
             print(f"{self.board.visited_cells} / {self.board.total_cells}")
@@ -33,13 +44,8 @@ class Robot:
                 self.return_back_to_crossroad()
 
     def make_step(self):
-        data = self.client.get_sensor_data(self.client.request_all)
-        dist = [
-            data['laser']['4'],
-            data['laser']['5'],
-            data['laser']['1'],
-            data['laser']['2']
-        ]
+        sensor_data = self.client.get_sensor_data(self.client.request_all)
+        dist = Direction.get_ordered_directions(sensor_data['laser'])
 
         # self.check_is_centered(data)
         self.analyze_data(dist)
@@ -60,13 +66,8 @@ class Robot:
         self.turn_around()
         self.memory.append(0)
         while True:
-            data = self.client.get_sensor_data(self.client.request_all)
-            dist = [
-                data['laser']['4'],
-                data['laser']['5'],
-                data['laser']['1'],
-                data['laser']['2']
-            ]
+            sensor_data = self.client.get_sensor_data(self.client.request_all)
+            dist = Direction.get_ordered_directions(sensor_data['laser'])
             self.analyze_data(dist)
 
             can_move = False
@@ -127,25 +128,112 @@ class Robot:
     #     self.diff_y = abs(cur_y - should_be_y)
     #     self.is_centered = self.diff_x <= 25 and self.diff_y <= 25
 
-
-    #TODO: correction on yaw
     def go_right(self):
         self.cur_direction = (self.cur_direction + 1) % 4
-        self.client.turn_right(self.turn_right_angle)
-        self.client.go_forward(self.board.get_cell_size())
+        if self.is_motor_used:
+            self.client.make_action_motor(self.left_pwm, -self.right_pwm, self.time_for_90_degree_turn)
+            self.client.make_action_motor(self.left_pwm, self.right_pwm, self.time_for_one_step)
+        else:
+            self.client.turn_right(self.turn_right_angle)
+            self.client.go_forward(self.board.get_cell_size())
 
     def go_left(self):
         self.cur_direction = (self.cur_direction - 1 + 4) % 4
-        self.client.turn_left(self.turn_left_angle)
-        self.client.go_forward(self.board.get_cell_size())
+        if self.is_motor_used:
+            self.client.make_action_motor(-self.left_pwm, self.right_pwm, self.time_for_90_degree_turn)
+            self.client.make_action_motor(self.left_pwm, self.right_pwm, self.time_for_one_step)
+        else:
+            self.client.turn_left(self.turn_left_angle)
+            self.client.go_forward(self.board.get_cell_size())
 
     def turn_around(self):
         self.cur_direction = (self.cur_direction + 2) % 4
-        self.client.turn_left(self.turn_left_angle)
-        self.client.turn_left(self.turn_left_angle)
+        if self.is_motor_used:
+            self.client.make_action_motor(self.left_pwm, -self.right_pwm, self.time_for_90_degree_turn * 2)
+        else:
+            self.client.turn_left(self.turn_left_angle)
+            self.client.turn_left(self.turn_left_angle)
 
     def go_forward(self):
-        self.client.go_forward(self.board.get_cell_size())
+        if self.is_motor_used:
+            self.client.make_action_motor(self.left_pwm, self.right_pwm, self.time_for_one_step)
+        else:
+            self.client.go_forward(self.board.get_cell_size())
 
     def go_back(self):
-        self.client.go_back(self.board.get_cell_size())
+        if self.is_motor_used:
+            self.client.make_action_motor(-self.left_pwm, -self.right_pwm, self.time_for_one_step)
+        else:
+            self.client.go_back(self.board.get_cell_size())
+
+    def set_motor_for_direct_move(self):
+        adjustment = 5
+        test_time = 1000
+
+        for _ in range(10):
+            initial_yaw = self.client.get_sensor_data(self.client.request_all)['yaw']
+            
+            self.client.make_action_motor(self.left_pwm, self.right_pwm, test_time, test_time)
+            
+            final_yaw = self.client.get_sensor_data(self.client.request_all)['yaw']
+            
+            yaw_error = final_yaw - initial_yaw
+
+            self.client.make_action_motor(-self.left_pwm, -self.right_pwm, test_time, test_time)
+            
+            if yaw_error > 1:  # The robot goes to the right, we slow down the right engine
+                self.right_pwm -= adjustment
+            elif yaw_error < -1:  # The robot goes to the left, we slow down the left motor
+                self.left_pwm -= adjustment
+            else:
+                break  # The robot is moving straight, calibration is complete
+
+        difference = abs(self.left_pwm - self.right_pwm)
+
+        if self.right_pwm < self.left_pwm:
+            self.left_pwm = 255
+            self.right_pwm = 255 - difference
+        else:
+            self.right_pwm = 255
+            self.left_pwm = 255 - difference
+
+    def set_time_for_one_step(self):
+        move_duration = 1000  
+        initial_front_distance = self.client.get_sensor_data(self.client.request_all)[Direction.FORWARD.value]
+        self.client.make_action_motor(self.left_pwm, self.right_pwm, move_duration)
+
+        final_front_distance = self.client.get_sensor_data(self.client.request_all)[Direction.FORWARD.value]
+        self.client.make_action_motor(-self.left_pwm, -self.right_pwm, move_duration)
+
+        distance = abs(final_front_distance - initial_front_distance)
+        speed = distance / move_duration
+        self.time_for_one_step = self.board.get_cell_size() / speed
+
+    def set_time_for_90_degree_turn(self):
+        left_pwm = 255
+        right_pwm = -255
+        move_duration = 1000
+
+        initial_yaw = self.client.get_sensor_data(self.client.request_all)['yaw']
+        self.client.make_action_motor(left_pwm, right_pwm, move_duration, move_duration)
+
+        final_yaw = self.client.get_sensor_data(self.client.request_all)['yaw']
+        self.client.make_action_motor(-left_pwm, -right_pwm, move_duration, move_duration)
+
+        difference_yaw = abs(final_yaw - initial_yaw)
+        speed = difference_yaw / move_duration
+        self.time_for_90_degree_turn = 90 / speed
+
+
+    def calibration(self):
+        self.set_motor_for_direct_move()
+        self.set_time_for_one_step()
+        self.set_time_for_90_degree_turn()
+
+        
+        
+
+
+
+
+        
