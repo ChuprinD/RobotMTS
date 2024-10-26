@@ -6,17 +6,15 @@ from Directions import Direction
 class Robot:
     BORDER_TO_GO = 150
 
-    def __init__(self, cell, board, is_motor_used):
+    def __init__(self, cell, board, is_motor_used, logging):
         self.id = "3536AF962E7A4A53"
         self.ip = "192.168.68.134"
+        self.logging = logging
         self.cur_cell = cell
         self.board = board
         self.board.visit_cell(cell)
-        self.client = Client(self.id, self.ip)
+        self.client = Client(self.id, self.ip, logging)
         self.cur_direction = 0
-        self.is_centered = True
-        self.diff_x = 0
-        self.diff_y = 0
         self.memory = deque()
         self.actions = [
             self.go_forward,
@@ -33,7 +31,7 @@ class Robot:
         self.left_pwm = self.base_pwm
         self.right_pwm = self.base_pwm
         self.time_for_one_step = 0
-        self.time_for_90_degree_turn = 0
+        self.time_for_turn = dict()
 
     def scan_maze(self):
         self.calibration()
@@ -48,7 +46,6 @@ class Robot:
         sensor_data = self.client.get_sensor_data(self.client.request_all)
         dist = Direction.get_ordered_directions(sensor_data['laser'])
 
-        # self.check_is_centered(data)
         self.analyze_data(dist)
 
         for i in range(4):
@@ -116,23 +113,10 @@ class Robot:
             elif direction == 3:
                 self.cur_cell.left_wall = dist[i] <= self.BORDER_TO_GO
 
-    # def check_is_centered(self, sensor_data):
-    #     x_wall = 166.7
-    #     y_wall = 167
-    #     board_x = self.cur_cell.x - 8 + 0.5
-    #     board_y = self.cur_cell.y - 8 + 0.5
-    #     cur_x = sensor_data['down_y_offset']
-    #     cur_y = sensor_data['down_x_offset']
-    #     should_be_x = x_wall * board_x
-    #     should_be_y = y_wall * board_y
-    #     self.diff_x = abs(cur_x - should_be_x)
-    #     self.diff_y = abs(cur_y - should_be_y)
-    #     self.is_centered = self.diff_x <= 25 and self.diff_y <= 25
-
     def go_right(self):
         self.cur_direction = (self.cur_direction + 1) % 4
         if self.is_motor_used:
-            self.client.make_action_motor(self.left_pwm, -self.right_pwm, self.time_for_90_degree_turn)
+            self.client.make_action_motor(self.left_pwm, -self.right_pwm, self.time_for_turn[90])
             self.client.make_action_motor(self.left_pwm, self.right_pwm, self.time_for_one_step)
         else:
             self.client.turn_right(self.turn_right_angle)
@@ -141,7 +125,7 @@ class Robot:
     def go_left(self):
         self.cur_direction = (self.cur_direction - 1 + 4) % 4
         if self.is_motor_used:
-            self.client.make_action_motor(-self.left_pwm, self.right_pwm, self.time_for_90_degree_turn)
+            self.client.make_action_motor(-self.left_pwm, self.right_pwm, self.time_for_turn[90])
             self.client.make_action_motor(self.left_pwm, self.right_pwm, self.time_for_one_step)
         else:
             self.client.turn_left(self.turn_left_angle)
@@ -150,7 +134,8 @@ class Robot:
     def turn_around(self):
         self.cur_direction = (self.cur_direction + 2) % 4
         if self.is_motor_used:
-            self.client.make_action_motor(self.left_pwm, -self.right_pwm, self.time_for_90_degree_turn * 2)
+            self.client.make_action_motor(self.left_pwm, -self.right_pwm, self.time_for_turn[90])
+            self.client.make_action_motor(self.left_pwm, -self.right_pwm, self.time_for_turn[90])
         else:
             self.client.turn_left(self.turn_left_angle)
             self.client.turn_left(self.turn_left_angle)
@@ -178,57 +163,78 @@ class Robot:
 
             final_yaw = self.client.get_sensor_data(self.client.request_all)['imu']['yaw']
 
-            yaw_error = final_yaw - initial_yaw
+            yaw_change = final_yaw - initial_yaw
 
             self.client.make_action_motor(-self.left_pwm, -self.right_pwm, test_time)
 
-            print(f"(dirct move)initial yaw: {initial_yaw}, final_yaw : {final_yaw}")
+            self.logging.info(f"initial yaw: {initial_yaw}, final yaw : {final_yaw}, yaw change : {yaw_change}")
 
-            if yaw_error > 1:  # The robot goes to the right, we slow down the right engine
+            if yaw_change > 1:  # The robot goes to the right, we slow down the right engine
                 self.right_pwm -= adjustment
-            elif yaw_error < -1:  # The robot goes to the left, we slow down the left motor
+            elif yaw_change < -1:  # The robot goes to the left, we slow down the left motor
                 self.left_pwm -= adjustment
             else:
                 break  # The robot is moving straight, calibration is complete
 
-        difference = abs(self.left_pwm - self.right_pwm)
-        # if self.right_pwm < self.left_pwm:
-        #     self.left_pwm = 255
-        #     self.right_pwm = 255 - difference
-        # else:
-        #     self.right_pwm = 255
-        #     self.left_pwm = 255 - difference
-
     def set_time_for_one_step(self):
         self.time_for_one_step = 300
-        for _ in range(4):
-            initial_front_distance = self.client.get_sensor_data(self.client.request_all)['laser'][
-                Direction.FORWARD.value]
-            self.client.make_action_motor(self.left_pwm, self.right_pwm, self.time_for_one_step)
-            final_front_distance = self.client.get_sensor_data(self.client.request_all)['laser'][
-                Direction.FORWARD.value]
-            self.client.make_action_motor(-self.left_pwm, -self.right_pwm, self.time_for_one_step)
-            print(f"(distance)initial front dist: {initial_front_distance}, final front dist : {final_front_distance}")
-            distance = abs(final_front_distance - initial_front_distance)
-            speed = distance / self.time_for_one_step
-            self.time_for_one_step = self.board.get_cell_size() / speed
+        time_step = self.time_for_one_step / 2
+        tolerance = 2
 
-    def set_time_for_90_degree_turn(self):
-        self.time_for_90_degree_turn = 300
-        for _ in range(4):
-            initial_yaw = self.client.get_sensor_data(self.client.request_all)['imu']['yaw']
-            self.client.make_action_motor(self.left_pwm, -self.right_pwm, self.time_for_90_degree_turn)
-            final_yaw = self.client.get_sensor_data(self.client.request_all)['imu']['yaw']
-            self.client.make_action_motor(-self.left_pwm, self.right_pwm, self.time_for_90_degree_turn)
-            print(f"(90 degree)initial yaw: {initial_yaw}, final_yaw : {final_yaw}")
-            difference_yaw = abs(final_yaw - initial_yaw)
-            speed = min(abs(360 - difference_yaw), abs(difference_yaw)) / self.time_for_90_degree_turn
-            self.time_for_90_degree_turn = 90 / speed
+        while time_step >= 1:
+            initial_distance = self.client.get_sensor_data(self.client.request_all)['laser'][Direction.BACKWARD.value]
+            self.client.make_action_motor(self.left_pwm, self.right_pwm, self.time_for_one_step)
+
+            final_distance = self.client.get_sensor_data(self.client.request_all)['laser'][Direction.BACKWARD.value]
+            self.client.make_action_motor(-self.left_pwm, -self.right_pwm, self.time_for_one_step)
+
+            distance = abs(final_distance - initial_distance)
+
+            self.logging.info(f"initial distance: {initial_distance}, final distance : {final_distance}, distance : {distance}")
+
+            if abs(distance - self.board.get_cell_size()) <= tolerance:
+                break
+
+            if distance < self.board.get_cell_size():
+                self.time_for_one_step += time_step
+            else:
+                self.time_for_one_step -= time_step
+            
+            time_step /= 2
+
+    def set_time_for_turn(self, target_angle):
+        current_time = 300
+        time_step = current_time / 2
+        tolerance = 2
+
+        while time_step >= 1:
+            initial_yaw = self.client.get_sensor_data()['imu']['yaw']
+            self.client.make_action_motor(self.left_pwm, -self.right_pwm, current_time)
+            
+            final_yaw = self.client.get_sensor_data()['imu']['yaw']
+            self.client.make_action_motor(-self.left_pwm, self.right_pwm, current_time)
+
+            yaw_change = abs(final_yaw - initial_yaw)
+
+            self.logging.info(f"initial yaw: {initial_yaw}, final yaw : {final_yaw}, yaw change : {yaw_change}")
+            
+            if abs(yaw_change - target_angle) <= tolerance:
+                self.time_for_turn[target_angle] = current_time
+                break
+            
+            if yaw_change < target_angle:
+                current_time += time_step
+            else:
+                current_time -= time_step
+            
+            time_step /= 2
+
+        self.time_for_turn[target_angle] = current_time
 
     def calibration(self):
         self.set_motor_for_direct_move()
         self.set_time_for_one_step()
-        self.set_time_for_90_degree_turn()
+        self.set_time_for_turn(target_angle=90)
 
 
 

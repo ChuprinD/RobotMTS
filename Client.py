@@ -7,9 +7,10 @@ class Client:
     base_uri = "http://127.0.0.1:8801/api/v1/robot-cells/"
     token = "0218a97c-38a3-42e8-a97d-08c565ee7d95e80ba549-6ee3-4070-a18b-6b4bdd87aea0"
 
-    def __init__(self, id, ip):
+    def __init__(self, id, ip, logging):
         self.robot_ip = ip
         self.robot_id = id
+        self.logging = logging
         self.client = requests.Session()
         self.request_all = "all"
         self.request_laser = "laser"
@@ -23,7 +24,6 @@ class Client:
         try:
             url = self.get_url("sensor")
             time.sleep(3)
-            print(url)
             headers = {'Content-Type': 'application/json'}
             json_matrix = json.dumps({"id": self.robot_id, "type": request_type})
             response = self.client.post(url, data=json_matrix, headers=headers)
@@ -31,12 +31,12 @@ class Client:
             response.raise_for_status()
 
             sensor_data = json.loads(response.text)
-            print(sensor_data)
+            self.logging.info(f"sensor_data: {sensor_data}")
             time.sleep(0.1)
             return sensor_data
 
         except requests.exceptions.RequestException as e:
-            print(f"An error occurred: {e}")
+            self.logging.error(f"An error occurred: {e}")
             return None
 
     def make_action(self, direction, len):
@@ -47,26 +47,26 @@ class Client:
             response = self.client.put(url, data=json_matrix, headers=headers)
             response.raise_for_status()
 
-            print(f"Action 'move {direction}' executed successfully")
+            self.logging.debug(f"Action 'move {direction}' executed successfully")
             time.sleep(0.25)
 
         except requests.exceptions.RequestException as e:
-            print(f"An error occurred during 'move {direction}': {e}")
+            self.logging.error(f"An error occurred during 'move {direction}': {e}")
             return None
 
     def make_action_motor(self, left_pwm, right_pwm, time_motor):
         try:
-            print(f"make_action_motor: left:{left_pwm}, right:{right_pwm}, time:{time_motor}")
+            self.logging.info(f"left_pwm:{left_pwm}, right_pwm:{right_pwm}, time_motor:{time_motor}")
             url = self.get_url("motor")
             headers = {'Content-Type': 'application/json'}
             json_matrix = json.dumps({"id": self.robot_id, "l": left_pwm, "r": right_pwm, "l_time": time_motor, "r_time": time_motor})
             response = self.client.put(url, data=json_matrix, headers=headers)
             response.raise_for_status()
-            print(f"Action 'move by motor' executed successfully")
+            self.logging.debug(f"Action 'move by motor' executed successfully")
             time.sleep(1)
 
         except requests.exceptions.RequestException as e:
-            print(f"An error occurred during 'move by motor': {e}")
+            self.logging.error(f"An error occurred during 'move by motor': {e}")
             return None
 
     def go_forward(self, len):
