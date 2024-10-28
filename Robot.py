@@ -208,10 +208,10 @@ class Robot:
         tolerance = 2
 
         while time_step >= 1:
-            initial_yaw = self.client.get_sensor_data()['imu']['yaw']
+            initial_yaw = self.client.get_sensor_data(self.client.request_all)['imu']['yaw']
             self.client.make_action_motor(self.left_pwm, -self.right_pwm, current_time)
             
-            final_yaw = self.client.get_sensor_data()['imu']['yaw']
+            final_yaw = self.client.get_sensor_data(self.client.request_all)['imu']['yaw']
             self.client.make_action_motor(-self.left_pwm, self.right_pwm, current_time)
 
             yaw_change = abs(final_yaw - initial_yaw)
@@ -233,7 +233,9 @@ class Robot:
 
     def calibration(self):
         self.set_motor_for_direct_move()
+        input()
         self.set_time_for_one_step()
+        input()
         self.set_time_for_turn(target_angle=90)
 
 
