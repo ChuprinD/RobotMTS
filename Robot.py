@@ -4,7 +4,7 @@ from Directions import Direction
 
 
 class Robot:
-    BORDER_TO_GO = 150
+    BORDER_TO_GO = 130
 
     def __init__(self, cell, board, is_motor_used, logging):
         self.id = "3536AF962E7A4A53"
@@ -26,12 +26,14 @@ class Robot:
         self.turn_left_angle = 270
 
         self.is_motor_used = is_motor_used
-        self.base_pwm = 60
+        self.base_pwm = 155 
         self.adjustment_pwm = 0
         self.left_pwm = self.base_pwm
         self.right_pwm = self.base_pwm
-        self.time_for_one_step = 0
+        self.time_for_one_step = 310
         self.time_for_turn = dict()
+        self.time_for_turn[90] = 170
+        self.theoretical_yaw = 0
 
     def scan_maze(self):
         #self.calibration()
@@ -121,29 +123,29 @@ class Robot:
     def go_right(self):
         self.cur_direction = (self.cur_direction + 1) % 4
         if self.is_motor_used:
-            self.client.make_action_motor(self.left_pwm, -self.right_pwm, self.time_for_turn[90])
-            self.client.make_action_motor(self.left_pwm, self.right_pwm, self.time_for_one_step)
+            self.client.turn_right()
+            self.client.go_forward()
         else:
             self.client.turn_right(self.turn_right_angle)
             self.client.go_forward(self.board.get_cell_size())
 
     def turn_left(self):
         if self.is_motor_used:
-            self.client.make_action_motor(-self.left_pwm, self.right_pwm, self.time_for_turn[90])
+            self.client.make_action_motor(-self.left_pwm, self.right_pwm, self.time_for_turn[90] - 10)
         else:
             self.client.turn_left(self.turn_left_angle)
 
     def turn_right(self):
         if self.is_motor_used:
-            self.client.make_action_motor(self.left_pwm, +self.right_pwm, self.time_for_turn[90])
+            self.client.make_action_motor(self.left_pwm, -self.right_pwm, self.time_for_turn[90])
         else:
             self.client.turn_right(self.turn_right_angle)
 
     def go_left(self):
         self.cur_direction = (self.cur_direction - 1 + 4) % 4
         if self.is_motor_used:
-            self.client.make_action_motor(-self.left_pwm, self.right_pwm, self.time_for_turn[90])
-            self.client.make_action_motor(self.left_pwm, self.right_pwm, self.time_for_one_step)
+            self.client.turn_left()
+            self.client.go_forward()
         else:
             self.client.turn_left(self.turn_left_angle)
             self.client.go_forward(self.board.get_cell_size())
