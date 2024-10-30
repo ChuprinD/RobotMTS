@@ -84,10 +84,10 @@ class Robot:
         if last_move == 0:
             self.turn_around()
         elif last_move == 1:
-            self.client.turn_right(self.turn_right_angle)
+            self.turn_right()
             self.cur_direction = (self.cur_direction + 1) % 4
         elif last_move == 4:
-            self.client.turn_left(self.turn_left_angle)
+            self.turn_left()
             self.cur_direction = (self.cur_direction + 3) % 4
 
     def get_cell(self, direction):
@@ -126,6 +126,18 @@ class Robot:
         else:
             self.client.turn_right(self.turn_right_angle)
             self.client.go_forward(self.board.get_cell_size())
+
+    def turn_left(self):
+        if self.is_motor_used:
+            self.client.make_action_motor(-self.left_pwm, self.right_pwm, self.time_for_turn[90])
+        else:
+            self.client.turn_left(self.turn_left_angle)
+
+    def turn_right(self):
+        if self.is_motor_used:
+            self.client.make_action_motor(self.left_pwm, +self.right_pwm, self.time_for_turn[90])
+        else:
+            self.client.turn_right(self.turn_right_angle)
 
     def go_left(self):
         self.cur_direction = (self.cur_direction - 1 + 4) % 4
