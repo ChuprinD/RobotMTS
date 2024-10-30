@@ -47,7 +47,11 @@ class Robot:
     def make_step(self):
         sensor_data = self.client.get_sensor_data(self.client.request_all)
         dist = Direction.get_ordered_directions(sensor_data['laser'])
+            
 
+        yaw_change = self.theoretical_yaw - sensor_data['imu']['yaw']   
+        yaw_change = (yaw_change + 180) % 360 - 180
+        self.calibration_angle(yaw_change)
         self.analyze_data(dist)
 
         for i in range(4):
@@ -61,6 +65,15 @@ class Robot:
                 self.actions[i]()
                 return True
         return False
+    
+    def calibration_angle(self, yaw_change):
+        if yaw_change > 0:
+            for _ in range(yaw_change):
+                self.client.make_action_motor(self.base_pwm, -self.base_pwm, 10)
+        else:
+            for _ in range(abs(yaw_change)):
+                self.client.make_action_motor(-self.base_pwm, self.base_pwm, 10)
+        
 
     def return_back_to_crossroad(self):
         self.turn_around()
@@ -123,8 +136,8 @@ class Robot:
     def go_right(self):
         self.cur_direction = (self.cur_direction + 1) % 4
         if self.is_motor_used:
-            self.client.turn_right()
-            self.client.go_forward()
+            self.turn_right()
+            self.go_forward()
         else:
             self.client.turn_right(self.turn_right_angle)
             self.client.go_forward(self.board.get_cell_size())
@@ -134,18 +147,20 @@ class Robot:
             self.client.make_action_motor(-self.left_pwm, self.right_pwm, self.time_for_turn[90] - 10)
         else:
             self.client.turn_left(self.turn_left_angle)
+        self.theoretical_yaw = (self.theoretical_yaw - 90 + 360) % 360
 
     def turn_right(self):
         if self.is_motor_used:
             self.client.make_action_motor(self.left_pwm, -self.right_pwm, self.time_for_turn[90])
         else:
             self.client.turn_right(self.turn_right_angle)
+        self.theoretical_yaw = (self.theoretical_yaw + 90) % 360
 
     def go_left(self):
         self.cur_direction = (self.cur_direction - 1 + 4) % 4
         if self.is_motor_used:
-            self.client.turn_left()
-            self.client.go_forward()
+            self.turn_left()
+            self.go_forward()
         else:
             self.client.turn_left(self.turn_left_angle)
             self.client.go_forward(self.board.get_cell_size())
