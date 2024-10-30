@@ -13,7 +13,7 @@ class Robot:
         self.cur_cell = cell
         self.board = board
         self.board.visit_cell(cell)
-        #self.client = Client(self.id, self.ip, logging)
+        self.client = Client(self.id, self.ip, logging)
         self.cur_direction = 0
         self.memory = deque()
         self.actions = [
