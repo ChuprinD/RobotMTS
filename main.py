@@ -16,7 +16,9 @@ def get_log_filename(base_name):
 
 def main():
     logging.basicConfig(filename=get_log_filename('robot'),  
-                        format='%(asctime)s - %(levelname)s - %(funcName)s - %(message)s')
+                        format='%(asctime)s - %(levelname)s - %(funcName)s - %(message)s',
+                        filemode='a',
+                        level=logging.DEBUG)
 
     board = Board()
     cell = board.get_cell(0, 0)

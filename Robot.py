@@ -13,7 +13,7 @@ class Robot:
         self.cur_cell = cell
         self.board = board
         self.board.visit_cell(cell)
-        self.client = Client(self.id, self.ip, logging)
+        #self.client = Client(self.id, self.ip, logging)
         self.cur_direction = 0
         self.memory = deque()
         self.actions = [
@@ -34,8 +34,8 @@ class Robot:
         self.time_for_turn = dict()
 
     def scan_maze(self):
-        self.calibration()
-        input()
+        #self.calibration()
+        #input("3")
         while self.board.visited_cells != self.board.total_cells:
             is_stepped = self.make_step()
             print(f"{self.board.visited_cells} / {self.board.total_cells}")
@@ -98,7 +98,12 @@ class Robot:
     def can_go(self, dist, direction):
         if dist <= self.BORDER_TO_GO:
             return False
+        
         next_cell = self.get_cell(direction)
+
+        if self.cur_cell.x == 6 and self.cur_cell.y == 8 and next_cell.x != 7 and next_cell.y != 8:
+            return False
+        
         return not next_cell.visited
 
     def analyze_data(self, dist):
@@ -232,11 +237,14 @@ class Robot:
         self.time_for_turn[target_angle] = current_time
 
     def calibration(self):
-        self.set_motor_for_direct_move()
-        input()
-        self.set_time_for_one_step()
-        input()
-        self.set_time_for_turn(target_angle=90)
+        #self.set_motor_for_direct_move()
+        self.logging.debug(f"right_pwm={self.right_pwm}, left_pwm={self.left_pwm}")
+        input("1")
+        #self.set_time_for_one_step()
+        self.logging.debug(f"time_for_one_step={self.time_for_one_step}")
+        input("2")
+        #self.set_time_for_turn(target_angle=90)
+        self.logging.debug(f"time_for_turn[90]={self.time_for_turn[90]}")
 
 
 
